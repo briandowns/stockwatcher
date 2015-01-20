@@ -1,7 +1,20 @@
 ## stockticker
 
-## Build & Install
+### Build & Install
 
-## Usage
+```sh
+$ make
+$ make install
+```
 
-## Examples
+### Usage
+
+```sh
+stockticker --help
+```
+
+### Examples
+
+```sh
+$ stockticker -s GOOG,IBM,FB -i 1
+```
