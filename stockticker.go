@@ -26,6 +26,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nsf/termbox-go"
 )
 
 const TIMEOUT = time.Duration(time.Second * 10)
@@ -72,6 +74,11 @@ type Fields struct {
 	Type    string `json:"type"`
 	UTCTime string `json:"utctime"`
 	Volume  string `json:"volume"`
+}
+
+type screenSize struct {
+	height int
+	width  int
 }
 
 type stockticker struct {
@@ -147,8 +154,7 @@ func (t *stockticker) stockRunner() {
 			)
 		}(k)
 	}
-	wg.Wait() // wait for the go routines to complete
-	fmt.Println(t)
+	wg.Wait()
 }
 
 func main() {
@@ -169,30 +175,24 @@ func main() {
 		t.add(*symbolFlag)
 	}
 	t.stockRunner()
-	/*
-		var wg sync.WaitGroup
-		for k, _ := range t.symbolData {
-			wg.Add(1)
-			go func(k string) {
-				defer wg.Done()
-				stock, err := query(k)
-				if err != nil {
-					log.Fatalln(err)
-					os.Exit(1)
-				}
-				t.updateStock(stock.List.Resources[0].Resource.Fields.Symbol,
-					convertPrice(re.FindString(stock.List.Resources[0].Resource.Fields.Price)),
-				)
-			}(k)
-		}
-		wg.Wait() // wait for the go routines to complete
-	*/
 	for {
 		select {
 		case <-time.After(t.interval):
 			t.stockRunner()
 		}
 	}
+	err := termbox.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer termbox.Close()
+	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+	w, h := termbox.Size()
+	s := &screenSize{
+		height: h,
+		width:  w,
+	}
+
 	fmt.Println(t)
 	os.Exit(0)
 }
