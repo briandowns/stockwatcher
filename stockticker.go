@@ -31,13 +31,13 @@ import (
 const TIMEOUT = time.Duration(time.Second * 10)
 const URL = "http://finance.yahoo.com/webservice/v1/symbols/%s/quote?format=json"
 
-var re = regexp.MustCompile(`^\d.+\.\d{2}`)
-var signalChan = make(chan os.Signal, 1) // channel to catch ctrl-c
+var re = regexp.MustCompile(`^\d.+\.\d{2}`) // this is to have only 2 decimal places
+var signalChan = make(chan os.Signal, 1)    // channel to catch ctrl-c
 
 var (
 	symbolFlag   = flag.String("s", "", "Symbols for ticker, comma seperate (no spaces)")
 	rateFlag     = flag.Int("r", 1, "Speed of stock data")
-	intervalFlag = flag.Int("i", 5, "Interval for stock data to be updated")
+	intervalFlag = flag.Int("i", 5, "Interval for stock data to be updated in minutes")
 )
 
 type Stock struct {
@@ -101,7 +101,6 @@ func (t *stockticker) add(symbol string) {
 func (t *stockticker) updateStock(symbol string, price float64) {
 	t.m.Lock()
 	defer t.m.Unlock()
-	fmt.Println("updating for ", symbol)
 	t.symbolData[symbol] = price
 }
 
@@ -132,28 +131,10 @@ func convertPrice(p string) float64 {
 	return price
 }
 
-func main() {
-	flag.Parse()
-	signal.Notify(signalChan, os.Interrupt)
-	go func() {
-		for range signalChan {
-			os.Exit(1)
-		}
-	}()
-	t := NewStockTicker(*rateFlag, time.Duration(*intervalFlag)*time.Minute)
-	switch {
-	case strings.Contains(*symbolFlag, ","):
-		for _, a := range strings.Split(*symbolFlag, ",") {
-			fmt.Println("Adding " + a)
-			t.add(a)
-		}
-	default:
-		t.add(*symbolFlag)
-	}
+func (t *stockticker) stockRunner() {
 	var wg sync.WaitGroup
 	for k, _ := range t.symbolData {
 		wg.Add(1)
-		fmt.Println("Getting for " + k)
 		go func(k string) {
 			defer wg.Done()
 			stock, err := query(k)
@@ -166,7 +147,52 @@ func main() {
 			)
 		}(k)
 	}
-	wg.Wait()
+	wg.Wait() // wait for the go routines to complete
+	fmt.Println(t)
+}
+
+func main() {
+	flag.Parse()
+	signal.Notify(signalChan, os.Interrupt)
+	go func() {
+		for range signalChan {
+			os.Exit(1)
+		}
+	}()
+	t := NewStockTicker(*rateFlag, time.Duration(*intervalFlag)*time.Minute)
+	switch {
+	case strings.Contains(*symbolFlag, ","):
+		for _, a := range strings.Split(*symbolFlag, ",") {
+			t.add(a)
+		}
+	default:
+		t.add(*symbolFlag)
+	}
+	t.stockRunner()
+	/*
+		var wg sync.WaitGroup
+		for k, _ := range t.symbolData {
+			wg.Add(1)
+			go func(k string) {
+				defer wg.Done()
+				stock, err := query(k)
+				if err != nil {
+					log.Fatalln(err)
+					os.Exit(1)
+				}
+				t.updateStock(stock.List.Resources[0].Resource.Fields.Symbol,
+					convertPrice(re.FindString(stock.List.Resources[0].Resource.Fields.Price)),
+				)
+			}(k)
+		}
+		wg.Wait() // wait for the go routines to complete
+	*/
+	for {
+		select {
+		case <-time.After(t.interval):
+			t.stockRunner()
+		}
+	}
 	fmt.Println(t)
 	os.Exit(0)
 }
