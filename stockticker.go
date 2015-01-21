@@ -236,30 +236,28 @@ func main() {
 			event <- termbox.PollEvent()
 		}
 	}()
-	t.runner()
+	/*t.runner()
 	t.printData()
-	time.Sleep(t.interval)
-	//loop:
-	go func() {
-		for {
-			// Poll key event or timeout (maybe)
-			select {
-			case <-event:
-				//break loop
-				return
-				//case <-time.After(5000 * time.Second):
-				//	break loop
-			}
+	time.Sleep(t.interval)*/
+loop:
+	for {
+		t.runner()
+		t.printData()
+		//time.Sleep(t.interval)
+
+		// Poll key event or timeout (maybe)
+		select {
+		case <-event:
+			break loop
+			return
+		//case <-time.After(5000 * time.Second):
+		case <-time.After(t.interval):
+			//break loop
+			continue loop
 		}
-	}()
+	}
 	close(event)
 	time.Sleep(1 * time.Second)
 	termbox.Close()
-	/*	for {
-		clearScreen()
-		t.runner()
-		t.printData()
-		time.Sleep(t.interval)
-	}*/
 	os.Exit(0)
 }
