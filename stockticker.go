@@ -115,15 +115,17 @@ func (t *stockticker) updateStock(symbol string, price float64) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	if t.quotes[symbol] == nil {
-		t.quotes[symbol] = map[string]float64{
-			"current": price, "previous": 0.00,
-		}
-	} else {
-		t.quotes[symbol] = map[string]float64{
-			"current": price, "previous": t.quotes[symbol]["current"],
-		}
+	//if t.quotes[symbol] == nil {
+	//	t.quotes[symbol] = map[string]float64{
+	//		"current": price, "previous": 0.00,
+	//	}
+	//} else {
+	t.quotes[symbol] = map[string]float64{
+		"previous": t.quotes[symbol]["current"],
+		"current":  price,
 	}
+	fmt.Println(t.quotes["symbol"]["previous"])
+	//	}
 }
 
 func query(symbol string) (*Stock, error) {
