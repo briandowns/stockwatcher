@@ -29,6 +29,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-runewidth"
+	"github.com/nsf/termbox-go"
 )
 
 const TIMEOUT = time.Duration(time.Second * 10)
@@ -174,16 +176,30 @@ func (t *stockticker) runner() {
 func (t *stockticker) printData() {
 	green := color.New(color.FgGreen).SprintFunc()
 	red := color.New(color.FgRed).SprintFunc()
-
+	pos := 1
 	for k, v := range t.quotes {
 		if v["present"] == 0.00 {
-			fmt.Printf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-")
+			printTb(1, pos, fmt.Sprintf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-"))
+			pos++
+			//fmt.Printf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-")
 		} else if v["current"] > v["previous"] {
-			fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP))
+			printTb(1, pos, fmt.Sprintf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP)))
+			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP))
+			pos++
 		} else {
-			fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN))
+			printTb(1, pos, fmt.Sprintf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN)))
+			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN))
+			pos++
 		}
 	}
+}
+
+func printTb(x, y int, msg string) {
+	for _, c := range []rune(msg) {
+		termbox.SetCell(x, y, c, termbox.ColorWhite, termbox.ColorDefault)
+		x += runewidth.RuneWidth(c)
+	}
+	termbox.Flush()
 }
 
 func main() {
@@ -207,11 +223,43 @@ func main() {
 		t.add(*symbolFlag)
 	}
 
-	for {
+	err := termbox.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
+	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+
+	event := make(chan termbox.Event)
+	go func() {
+		for {
+			// Post events to channel
+			event <- termbox.PollEvent()
+		}
+	}()
+	t.runner()
+	t.printData()
+	time.Sleep(t.interval)
+	//loop:
+	go func() {
+		for {
+			// Poll key event or timeout (maybe)
+			select {
+			case <-event:
+				//break loop
+				return
+				//case <-time.After(5000 * time.Second):
+				//	break loop
+			}
+		}
+	}()
+	close(event)
+	time.Sleep(1 * time.Second)
+	termbox.Close()
+	/*	for {
 		clearScreen()
 		t.runner()
 		t.printData()
 		time.Sleep(t.interval)
-	}
+	}*/
 	os.Exit(0)
 }
