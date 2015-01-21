@@ -20,6 +20,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"regexp"
 	"strconv"
@@ -27,19 +28,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nsf/termbox-go"
+	"github.com/fatih/color"
 )
 
 const TIMEOUT = time.Duration(time.Second * 10)
 const URL = "http://finance.yahoo.com/webservice/v1/symbols/%s/quote?format=json"
+const UP = "↑"
+const DOWN = "↓"
 
 var re = regexp.MustCompile(`^\d.+\.\d{2}`) // this is to have only 2 decimal places
 var signalChan = make(chan os.Signal, 1)    // channel to catch ctrl-c
 
 var (
 	symbolFlag   = flag.String("s", "", "Symbols for ticker, comma seperate (no spaces)")
-	rateFlag     = flag.Int("r", 1, "Speed of stock data")
-	intervalFlag = flag.Int("i", 5, "Interval for stock data to be updated in minutes")
+	intervalFlag = flag.Int("i", 0, "Interval for stock data to be updated in seconds")
 )
 
 type Stock struct {
@@ -76,39 +78,50 @@ type Fields struct {
 	Volume  string `json:"volume"`
 }
 
-type screenSize struct {
-	height int
-	width  int
-}
-
 type stockticker struct {
-	symbolData map[string]float64
-	speed      int
-	interval   time.Duration
-	m          *sync.Mutex
+	quotes   map[string]map[string]float64
+	interval time.Duration
+	m        *sync.Mutex
 }
 
-func NewStockTicker(s int, i time.Duration) *stockticker {
+// clearScreen runs a shell clear command
+func clearScreen() {
+	c := exec.Command("clear")
+	c.Stdout = os.Stdout
+	c.Run()
+}
+
+func NewStockTicker(i time.Duration) *stockticker {
 	return &stockticker{
-		symbolData: make(map[string]float64),
-		speed:      s,
-		interval:   i,
-		m:          &sync.Mutex{},
+		quotes:   make(map[string]map[string]float64),
+		interval: i,
+		m:        &sync.Mutex{},
 	}
 }
 
 func (t *stockticker) add(symbol string) {
 	t.m.Lock()
 	defer t.m.Unlock()
-	if _, ok := t.symbolData[symbol]; !ok {
-		t.symbolData[symbol] = 0.0
+
+	if _, ok := t.quotes[symbol]; !ok {
+		t.quotes[symbol] = map[string]float64{}
 	}
+
 }
 
 func (t *stockticker) updateStock(symbol string, price float64) {
 	t.m.Lock()
 	defer t.m.Unlock()
-	t.symbolData[symbol] = price
+
+	if t.quotes[symbol] == nil {
+		t.quotes[symbol] = map[string]float64{
+			"current": price, "previous": 0.00,
+		}
+	} else {
+		t.quotes[symbol] = map[string]float64{
+			"current": price, "previous": t.quotes[symbol]["current"],
+		}
+	}
 }
 
 func query(symbol string) (*Stock, error) {
@@ -116,6 +129,7 @@ func query(symbol string) (*Stock, error) {
 	client := http.Client{
 		Timeout: TIMEOUT,
 	}
+
 	resp, err := client.Get(fmt.Sprintf(URL, symbol))
 	if err != nil {
 		return nil, errors.New("unable to retrive symbol data")
@@ -138,9 +152,9 @@ func convertPrice(p string) float64 {
 	return price
 }
 
-func (t *stockticker) stockRunner() {
+func (t *stockticker) runner() {
 	var wg sync.WaitGroup
-	for k, _ := range t.symbolData {
+	for k, _ := range t.quotes {
 		wg.Add(1)
 		go func(k string) {
 			defer wg.Done()
@@ -157,15 +171,33 @@ func (t *stockticker) stockRunner() {
 	wg.Wait()
 }
 
+func (t *stockticker) printData() {
+	green := color.New(color.FgGreen).SprintFunc()
+	red := color.New(color.FgRed).SprintFunc()
+
+	for k, v := range t.quotes {
+		if v["present"] == 0.00 {
+			fmt.Printf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-")
+		} else if v["current"] > v["previous"] {
+			fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP))
+		} else {
+			fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN))
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
+
 	signal.Notify(signalChan, os.Interrupt)
 	go func() {
 		for range signalChan {
 			os.Exit(1)
 		}
 	}()
-	t := NewStockTicker(*rateFlag, time.Duration(*intervalFlag)*time.Minute)
+
+	t := NewStockTicker(time.Duration(*intervalFlag) * time.Second)
+
 	switch {
 	case strings.Contains(*symbolFlag, ","):
 		for _, a := range strings.Split(*symbolFlag, ",") {
@@ -174,25 +206,12 @@ func main() {
 	default:
 		t.add(*symbolFlag)
 	}
-	t.stockRunner()
-	for {
-		select {
-		case <-time.After(t.interval):
-			t.stockRunner()
-		}
-	}
-	err := termbox.Init()
-	if err != nil {
-		panic(err)
-	}
-	defer termbox.Close()
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	w, h := termbox.Size()
-	s := &screenSize{
-		height: h,
-		width:  w,
-	}
 
-	fmt.Println(t)
+	for {
+		clearScreen()
+		t.runner()
+		t.printData()
+		time.Sleep(t.interval)
+	}
 	os.Exit(0)
 }

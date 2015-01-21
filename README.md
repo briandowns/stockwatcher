@@ -3,7 +3,6 @@
 ### Build & Install
 
 ```sh
-$ make
 $ make install
 ```
 
@@ -16,5 +15,5 @@ stockticker --help
 ### Examples
 
 ```sh
-$ stockticker -s GOOG,IBM,FB -i 1
+$ stockticker -s GOOG,IBM,FB -i 10
 ```

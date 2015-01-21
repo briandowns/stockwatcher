@@ -1,8 +1,8 @@
-all:
-	go build -o stockticker
-
 install:
 	go install
 
-clean:
+remove:
 	rm -f $(GOPATH)/bin/stockticker
+
+clean:
+	rm -f stockticker
