@@ -173,6 +173,7 @@ func (t *stockticker) printData() {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+
 	pos := 1
 	for _, k := range keys {
 		if t.quotes[k]["previous"] == 0.00 || t.quotes[k]["previous"] == t.quotes[k]["current"] {
