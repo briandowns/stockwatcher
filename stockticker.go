@@ -209,6 +209,11 @@ func main() {
 		}
 	}()
 
+	if *symbolFlag == "" {
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	t := NewStockTicker(time.Duration(*intervalFlag) * time.Second)
 
 	switch {
