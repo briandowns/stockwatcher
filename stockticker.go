@@ -28,15 +28,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/mattn/go-runewidth"
 	"github.com/nsf/termbox-go"
 )
 
 const TIMEOUT = time.Duration(time.Second * 10)
 const URL = "http://finance.yahoo.com/webservice/v1/symbols/%s/quote?format=json"
-const UP = "↑"
-const DOWN = "↓"
+
+var UP = 8593   // '↑'
+var DOWN = 8595 //'↓'
 
 var re = regexp.MustCompile(`^\d.+\.\d{2}`) // this is to have only 2 decimal places
 var signalChan = make(chan os.Signal, 1)    // channel to catch ctrl-c
@@ -104,7 +104,6 @@ func NewStockTicker(i time.Duration) *stockticker {
 func (t *stockticker) add(symbol string) {
 	t.m.Lock()
 	defer t.m.Unlock()
-
 	if _, ok := t.quotes[symbol]; !ok {
 		t.quotes[symbol] = map[string]float64{}
 	}
@@ -114,18 +113,10 @@ func (t *stockticker) add(symbol string) {
 func (t *stockticker) updateStock(symbol string, price float64) {
 	t.m.Lock()
 	defer t.m.Unlock()
-
-	//if t.quotes[symbol] == nil {
-	//	t.quotes[symbol] = map[string]float64{
-	//		"current": price, "previous": 0.00,
-	//	}
-	//} else {
 	t.quotes[symbol] = map[string]float64{
 		"previous": t.quotes[symbol]["current"],
 		"current":  price,
 	}
-	fmt.Println(t.quotes["symbol"]["previous"])
-	//	}
 }
 
 func query(symbol string) (*Stock, error) {
@@ -176,20 +167,18 @@ func (t *stockticker) runner() {
 }
 
 func (t *stockticker) printData() {
-	green := color.New(color.FgGreen).SprintFunc()
-	red := color.New(color.FgRed).SprintFunc()
 	pos := 1
 	for k, v := range t.quotes {
-		if v["present"] == 0.00 {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-"))
+		if v["previous"] == 0.00 || v["previous"] == v["current"] {
+			printTb(1, pos, fmt.Sprintf("%6s %7v %7s %4s\n", k, v["current"], "-", "-"))
 			pos++
 			//fmt.Printf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-")
 		} else if v["current"] > v["previous"] {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP)))
+			printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, v["current"], v["previous"], UP))
 			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP))
 			pos++
 		} else {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN)))
+			printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, v["current"], v["previous"], DOWN))
 			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN))
 			pos++
 		}
@@ -238,23 +227,18 @@ func main() {
 			event <- termbox.PollEvent()
 		}
 	}()
-	/*t.runner()
-	t.printData()
-	time.Sleep(t.interval)*/
+
 loop:
 	for {
 		t.runner()
 		t.printData()
-		//time.Sleep(t.interval)
 
 		// Poll key event or timeout (maybe)
 		select {
 		case <-event:
 			break loop
 			return
-		//case <-time.After(5000 * time.Second):
 		case <-time.After(t.interval):
-			//break loop
 			continue loop
 		}
 	}
