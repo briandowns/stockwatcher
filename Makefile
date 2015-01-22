@@ -3,7 +3,7 @@ install:
 
 remove:
 	go clean -n -i -x
-	rm -f $(GOPATH)/bin/stockticker
+	rm -f $(GOPATH)/bin/stockwatcher
 
 clean:
-	rm -f stockticker
+	rm -f stockwatcher
