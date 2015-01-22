@@ -24,12 +24,12 @@ Output from the above command shown below.
 
 ```sh
 
-   AAPL  109.55       -    -
-   CSCO   27.84       -    -
-     FB   76.73       -    -
-   GOOG  518.03       -    -
-    IBM  152.08       -    -
-   TWTR   37.83       -    -
-   YHOO   48.18       -    -
+   AAPL  111.09  111.25    ↓
+   CSCO   27.69   27.68    ↑
+     FB   77.37   77.41    ↓
+   GOOG  528.57       -    -
+    IBM  154.57  154.46    ↑
+   TWTR   38.77    38.8    ↓
+   YHOO   48.66       -    -
 
 ```
