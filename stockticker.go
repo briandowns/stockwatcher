@@ -35,9 +35,8 @@ import (
 
 const TIMEOUT = time.Duration(time.Second * 10)
 const URL = "http://finance.yahoo.com/webservice/v1/symbols/%s/quote?format=json"
-
-var UP = 8593   // '↑'
-var DOWN = 8595 //'↓'
+const UP = "↑"   // rune 8593
+const DOWN = "↓" // rune 8595
 
 var re = regexp.MustCompile(`^\d.+\.\d{2}`) // this is to have only 2 decimal places
 var signalChan = make(chan os.Signal, 1)    // channel to catch ctrl-c
@@ -244,7 +243,6 @@ loop:
 		select {
 		case <-event:
 			break loop
-			return
 		case <-time.After(t.interval):
 			continue loop
 		}
