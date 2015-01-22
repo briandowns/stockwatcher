@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -167,18 +168,23 @@ func (t *stockticker) runner() {
 }
 
 func (t *stockticker) printData() {
+	var keys []string
+	for k := range t.quotes {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	pos := 1
-	for k, v := range t.quotes {
-		if v["previous"] == 0.00 || v["previous"] == v["current"] {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %7s %4s\n", k, v["current"], "-", "-"))
+	for _, k := range keys {
+		if t.quotes[k]["previous"] == 0.00 || t.quotes[k]["previous"] == t.quotes[k]["current"] {
+			printTb(1, pos, fmt.Sprintf("%6s %7v %7s %4s\n", k, t.quotes[k]["current"], "-", "-"))
 			pos++
 			//fmt.Printf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-")
-		} else if v["current"] > v["previous"] {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, v["current"], v["previous"], UP))
+		} else if t.quotes[k]["current"] > t.quotes[k]["previous"] {
+			printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, t.quotes[k]["current"], t.quotes[k]["previous"], UP))
 			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP))
 			pos++
 		} else {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, v["current"], v["previous"], DOWN))
+			printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, t.quotes[k]["current"], t.quotes[k]["previous"], DOWN))
 			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN))
 			pos++
 		}
