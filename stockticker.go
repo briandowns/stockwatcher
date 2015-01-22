@@ -209,7 +209,7 @@ func main() {
 		}
 	}()
 
-	if *symbolFlag == "" {
+	if flag.NFlag() != 2 || *symbolFlag == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
