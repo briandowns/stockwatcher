@@ -10,6 +10,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// A CLI application to monitor one or more stocks.
 package main
 
 import (
@@ -41,6 +42,7 @@ const DOWN = "↓" // rune 8595
 var re = regexp.MustCompile(`^\d.+\.\d{2}`) // this is to have only 2 decimal places
 var signalChan = make(chan os.Signal, 1)    // channel to catch ctrl-c
 
+// Flag variables to hold CLI arguments
 var (
 	symbolFlag   = flag.String("s", "", "Symbols for ticker, comma seperate (no spaces)")
 	intervalFlag = flag.Int("i", 1, "Interval for stock data to be updated in seconds")
@@ -70,16 +72,18 @@ type Resource struct {
 	Fields    Fields `json:"fields"`
 }
 
+// Fields holds all of the retrieved data from the API call
 type Fields struct {
-	Name    string `json:"name"`
-	Price   string `json:"price"`
-	Symbol  string `json:"symbol"`
-	TS      string `json:"ts"`
-	Type    string `json:"type"`
-	UTCTime string `json:"utctime"`
-	Volume  string `json:"volume"`
+	Name    string `json:"name"`    // name of company
+	Price   string `json:"price"`   // current price
+	Symbol  string `json:"symbol"`  // stock symbol
+	TS      string `json:"ts"`      //
+	Type    string `json:"type"`    // type of stock (equity, etc...)
+	UTCTime string `json:"utctime"` // time in UTC
+	Volume  string `json:"volume"`  // shares traded
 }
 
+// stockwatcher holds the relevant data for the running instance
 type stockwatcher struct {
 	quotes   map[string]map[string]float64
 	interval time.Duration
@@ -93,6 +97,7 @@ func clearScreen() {
 	c.Run()
 }
 
+// NewStockWatcher returns a new instance of stockwatcher with the given parameters
 func NewStockWatcher(i time.Duration) *stockwatcher {
 	return &stockwatcher{
 		quotes:   make(map[string]map[string]float64),
@@ -101,6 +106,7 @@ func NewStockWatcher(i time.Duration) *stockwatcher {
 	}
 }
 
+// add takes the given symbol and populates a key in the quotes map
 func (t *stockwatcher) add(symbol string) {
 	t.m.Lock()
 	defer t.m.Unlock()
@@ -110,6 +116,7 @@ func (t *stockwatcher) add(symbol string) {
 
 }
 
+// updateStock populates stockwatcher struct with stock prices
 func (t *stockwatcher) updateStock(symbol string, price float64) {
 	t.m.Lock()
 	defer t.m.Unlock()
@@ -141,6 +148,7 @@ func query(symbol string) (*Stock, error) {
 	return data, nil
 }
 
+// convertPrice converts the given string to a float64 value
 func convertPrice(p string) float64 {
 	price, err := strconv.ParseFloat(p, 64)
 	if err != nil {
@@ -150,6 +158,7 @@ func convertPrice(p string) float64 {
 	return price
 }
 
+// runner goes through and gets the data for each symbol
 func (t *stockwatcher) runner() {
 	var wg sync.WaitGroup
 	for k, _ := range t.quotes {
@@ -169,7 +178,8 @@ func (t *stockwatcher) runner() {
 	wg.Wait()
 }
 
-func (t *stockwatcher) printData() {
+// formatData formats the given data for printing
+func (t *stockwatcher) formatData() {
 	var keys []string
 	for k := range t.quotes {
 		keys = append(keys, k)
@@ -196,6 +206,7 @@ func (t *stockwatcher) printData() {
 	}
 }
 
+// printTb prints the given data out to the screen
 func printTb(x, y int, msg string, fg, bg termbox.Attribute) {
 	for _, c := range []rune(msg) {
 		//termbox.SetCell(x, y, c, termbox.ColorWhite, termbox.ColorDefault)
@@ -208,6 +219,7 @@ func printTb(x, y int, msg string, fg, bg termbox.Attribute) {
 func main() {
 	flag.Parse()
 
+	// catch ctrl+c's
 	signal.Notify(signalChan, os.Interrupt)
 	go func() {
 		for range signalChan {
@@ -215,6 +227,7 @@ func main() {
 		}
 	}()
 
+	// make sure we got what was expected from the CLI
 	if flag.NFlag() != 2 || *symbolFlag == "" {
 		flag.Usage()
 		os.Exit(1)
@@ -222,6 +235,7 @@ func main() {
 
 	t := NewStockWatcher(time.Duration(*intervalFlag) * time.Second)
 
+	// check if more than one symbol has been given
 	switch {
 	case strings.Contains(*symbolFlag, ","):
 		for _, a := range strings.Split(*symbolFlag, ",") {
@@ -231,6 +245,7 @@ func main() {
 		t.add(*symbolFlag)
 	}
 
+	// initialize termbox
 	err := termbox.Init()
 	if err != nil {
 		log.Fatal(err)
@@ -248,7 +263,7 @@ func main() {
 loop:
 	for {
 		t.runner()
-		t.printData()
+		t.formatData()
 
 		// Poll key event or timeout (maybe)
 		select {
