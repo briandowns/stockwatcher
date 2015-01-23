@@ -113,7 +113,6 @@ func (t *stockwatcher) add(symbol string) {
 	if _, ok := t.quotes[symbol]; !ok {
 		t.quotes[symbol] = map[string]float64{}
 	}
-
 }
 
 // updateStock populates stockwatcher struct with stock prices
@@ -141,7 +140,6 @@ func query(symbol string) (*Stock, error) {
 	defer resp.Body.Close()
 
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-
 		log.Fatalln(err)
 		os.Exit(1)
 	}
@@ -181,26 +179,39 @@ func (t *stockwatcher) runner() {
 // formatData formats the given data for printing
 func (t *stockwatcher) formatData() {
 	var keys []string
+	// populate list with keys from quote map
 	for k := range t.quotes {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	sort.Strings(keys) // alphabetize keys
 
 	pos := 1
 	for _, k := range keys {
+		// print format for first run or if not change detected from previous run
 		if t.quotes[k]["previous"] == 0.00 || t.quotes[k]["previous"] == t.quotes[k]["current"] {
-			printTb(1, pos, fmt.Sprintf("%-6s %-7v %11s %-4s\n", k, t.quotes[k]["current"], "%", "-"), termbox.ColorWhite, termbox.ColorDefault)
-			//printTb(1, pos, fmt.Sprintf("%6s %7v %7s %4s\n", k, t.quotes[k]["current"], "-", "-"), termbox.ColorWhite, termbox.ColorDefault)
+			printTb(1,
+				pos,
+				fmt.Sprintf("%-6s %-7v %11s %-4s\n", k, t.quotes[k]["current"], "%", "-"),
+				termbox.ColorWhite, termbox.ColorDefault,
+			)
 			pos++
-			//fmt.Printf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-")
+			// print format in green if current price being is greater than previous price
 		} else if t.quotes[k]["current"] > t.quotes[k]["previous"] {
-			printTb(1, pos, fmt.Sprintf("%-6s %-7v +%-.6f %% %-4s\n", k, t.quotes[k]["current"], t.quotes[k]["current"]/t.quotes[k]["previous"], UP), termbox.ColorGreen, termbox.ColorDefault)
-			//printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, t.quotes[k]["current"], t.quotes[k]["previous"], UP), termbox.ColorGreen, termbox.ColorDefault)
-			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP))
+			printTb(1,
+				pos,
+				fmt.Sprintf("%-6s %-7v +%-.6f %% %-4s\n", k, t.quotes[k]["current"], t.quotes[k]["current"]/t.quotes[k]["previous"], UP),
+				termbox.ColorGreen,
+				termbox.ColorDefault,
+			)
 			pos++
+			// print format in red if current price being is lesser than previous price
 		} else {
-			printTb(1, pos, fmt.Sprintf("%-6s %-7v -%-.6f %% %-4s\n", k, t.quotes[k]["current"], t.quotes[k]["current"]/t.quotes[k]["previous"], DOWN), termbox.ColorRed, termbox.ColorDefault)
-			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN))
+			printTb(1,
+				pos,
+				fmt.Sprintf("%-6s %-7v -%-.6f %% %-4s\n", k, t.quotes[k]["current"], t.quotes[k]["current"]/t.quotes[k]["previous"], DOWN),
+				termbox.ColorRed,
+				termbox.ColorDefault,
+			)
 			pos++
 		}
 	}
@@ -209,7 +220,6 @@ func (t *stockwatcher) formatData() {
 // printTb prints the given data out to the screen
 func printTb(x, y int, msg string, fg, bg termbox.Attribute) {
 	for _, c := range []rune(msg) {
-		//termbox.SetCell(x, y, c, termbox.ColorWhite, termbox.ColorDefault)
 		termbox.SetCell(x, y, c, fg, bg)
 		x += runewidth.RuneWidth(c)
 	}
@@ -219,7 +229,7 @@ func printTb(x, y int, msg string, fg, bg termbox.Attribute) {
 func main() {
 	flag.Parse()
 
-	// catch ctrl+c's
+	// catch ctrl-c's
 	signal.Notify(signalChan, os.Interrupt)
 	go func() {
 		for range signalChan {
