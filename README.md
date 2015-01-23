@@ -35,3 +35,5 @@ $ stockwatcher -s GOOG,IBM,YHOO,CSCO,AAPL,FB,TWTR -i 1
    YHOO   48.41   48.44    ↓
 
 ```
+
+![http://i.picasion.com/pic79/0131736efe91ae428c0fe8f60fc92f3c.gif](http://i.picasion.com/pic79/0131736efe91ae428c0fe8f60fc92f3c.gif)
