@@ -43,7 +43,7 @@ var signalChan = make(chan os.Signal, 1)    // channel to catch ctrl-c
 
 var (
 	symbolFlag   = flag.String("s", "", "Symbols for ticker, comma seperate (no spaces)")
-	intervalFlag = flag.Int("i", 0, "Interval for stock data to be updated in seconds")
+	intervalFlag = flag.Int("i", 1, "Interval for stock data to be updated in seconds")
 )
 
 type Stock struct {
@@ -80,7 +80,7 @@ type Fields struct {
 	Volume  string `json:"volume"`
 }
 
-type stockticker struct {
+type stockwatcher struct {
 	quotes   map[string]map[string]float64
 	interval time.Duration
 	m        *sync.Mutex
@@ -93,15 +93,15 @@ func clearScreen() {
 	c.Run()
 }
 
-func NewStockTicker(i time.Duration) *stockticker {
-	return &stockticker{
+func NewStockWatcher(i time.Duration) *stockwatcher {
+	return &stockwatcher{
 		quotes:   make(map[string]map[string]float64),
 		interval: i,
 		m:        &sync.Mutex{},
 	}
 }
 
-func (t *stockticker) add(symbol string) {
+func (t *stockwatcher) add(symbol string) {
 	t.m.Lock()
 	defer t.m.Unlock()
 	if _, ok := t.quotes[symbol]; !ok {
@@ -110,7 +110,7 @@ func (t *stockticker) add(symbol string) {
 
 }
 
-func (t *stockticker) updateStock(symbol string, price float64) {
+func (t *stockwatcher) updateStock(symbol string, price float64) {
 	t.m.Lock()
 	defer t.m.Unlock()
 	t.quotes[symbol] = map[string]float64{
@@ -134,6 +134,7 @@ func query(symbol string) (*Stock, error) {
 	defer resp.Body.Close()
 
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+
 		log.Fatalln(err)
 		os.Exit(1)
 	}
@@ -149,7 +150,7 @@ func convertPrice(p string) float64 {
 	return price
 }
 
-func (t *stockticker) runner() {
+func (t *stockwatcher) runner() {
 	var wg sync.WaitGroup
 	for k, _ := range t.quotes {
 		wg.Add(1)
@@ -168,7 +169,7 @@ func (t *stockticker) runner() {
 	wg.Wait()
 }
 
-func (t *stockticker) printData() {
+func (t *stockwatcher) printData() {
 	var keys []string
 	for k := range t.quotes {
 		keys = append(keys, k)
@@ -178,24 +179,27 @@ func (t *stockticker) printData() {
 	pos := 1
 	for _, k := range keys {
 		if t.quotes[k]["previous"] == 0.00 || t.quotes[k]["previous"] == t.quotes[k]["current"] {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %7s %4s\n", k, t.quotes[k]["current"], "-", "-"))
+			printTb(1, pos, fmt.Sprintf("%-6s %-7v %11s %-4s\n", k, t.quotes[k]["current"], "%", "-"), termbox.ColorWhite, termbox.ColorDefault)
+			//printTb(1, pos, fmt.Sprintf("%6s %7v %7s %4s\n", k, t.quotes[k]["current"], "-", "-"), termbox.ColorWhite, termbox.ColorDefault)
 			pos++
 			//fmt.Printf("%6s %7v %%%5s %4s\n", k, v["current"], "-", "-")
 		} else if t.quotes[k]["current"] > t.quotes[k]["previous"] {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, t.quotes[k]["current"], t.quotes[k]["previous"], DOWN))
+			printTb(1, pos, fmt.Sprintf("%-6s %-7v +%-.6f %% %-4s\n", k, t.quotes[k]["current"], t.quotes[k]["current"]/t.quotes[k]["previous"], UP), termbox.ColorGreen, termbox.ColorDefault)
+			//printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, t.quotes[k]["current"], t.quotes[k]["previous"], UP), termbox.ColorGreen, termbox.ColorDefault)
 			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), green(UP))
 			pos++
 		} else {
-			printTb(1, pos, fmt.Sprintf("%6s %7v %7v %4s\n", k, t.quotes[k]["current"], t.quotes[k]["previous"], UP))
+			printTb(1, pos, fmt.Sprintf("%-6s %-7v -%-.6f %% %-4s\n", k, t.quotes[k]["current"], t.quotes[k]["current"]/t.quotes[k]["previous"], DOWN), termbox.ColorRed, termbox.ColorDefault)
 			//fmt.Printf("%6s %7v %%%5v %4s\n", k, v["current"], 100*(v["previous"]/v["current"]), red(DOWN))
 			pos++
 		}
 	}
 }
 
-func printTb(x, y int, msg string) {
+func printTb(x, y int, msg string, fg, bg termbox.Attribute) {
 	for _, c := range []rune(msg) {
-		termbox.SetCell(x, y, c, termbox.ColorWhite, termbox.ColorDefault)
+		//termbox.SetCell(x, y, c, termbox.ColorWhite, termbox.ColorDefault)
+		termbox.SetCell(x, y, c, fg, bg)
 		x += runewidth.RuneWidth(c)
 	}
 	termbox.Flush()
@@ -216,7 +220,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	t := NewStockTicker(time.Duration(*intervalFlag) * time.Second)
+	t := NewStockWatcher(time.Duration(*intervalFlag) * time.Second)
 
 	switch {
 	case strings.Contains(*symbolFlag, ","):
