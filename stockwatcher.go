@@ -163,11 +163,9 @@ func (t *stockwatcher) runner() {
 		go func(k string) {
 			defer wg.Done()
 			stock, err := query(k)
-			if err != nil {
-				t.updateStock(stock.List.Resources[0].Resource.Fields.Symbol, 0.00)
+			if err != nil { // if we can't get a response from the API, put 0.00 in and keep going
+				t.updateStock(k, 0.00)
 				return
-				//log.Fatalln(err)
-				//os.Exit(1)
 			}
 			t.updateStock(stock.List.Resources[0].Resource.Fields.Symbol,
 				convertPrice(re.FindString(stock.List.Resources[0].Resource.Fields.Price)),
@@ -179,8 +177,8 @@ func (t *stockwatcher) runner() {
 
 // formatData formats the given data for printing
 func (t *stockwatcher) formatData() {
-	var keys []string
 	// populate list with keys from quote map
+	var keys []string
 	for k := range t.quotes {
 		keys = append(keys, k)
 	}
