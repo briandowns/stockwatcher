@@ -47,25 +47,30 @@ var (
 	intervalFlag = flag.Int("i", 1, "Interval for stock data to be updated in seconds")
 )
 
+// Stock is the top level of the returned JSON
 type Stock struct {
 	List List `json:"list"`
 }
 
+// List hold the metadata and list of returned symbol data
 type List struct {
 	Meta      Meta        `json:"meta"`
 	Resources []Resources `json:"resources"`
 }
 
+// Meta is the calls metadata
 type Meta struct {
 	Type  string `json:"type"`
 	Start uint   `json:"start"`
 	Count uint   `json:"count"`
 }
 
+// Resources holds a JSON obj with the symbol data
 type Resources struct {
 	Resource Resource `json:"resource"`
 }
 
+// Resource contains the actual JSON obj with the symbol data
 type Resource struct {
 	Classname string `json:"classname"`
 	Fields    Fields `json:"fields"`
