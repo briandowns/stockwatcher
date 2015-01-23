@@ -89,13 +89,6 @@ type stockwatcher struct {
 	m        *sync.Mutex
 }
 
-// clearScreen runs a shell clear command
-func clearScreen() {
-	c := exec.Command("clear")
-	c.Stdout = os.Stdout
-	c.Run()
-}
-
 // NewStockWatcher returns a new instance of stockwatcher with the given parameters
 func NewStockWatcher(i time.Duration) *stockwatcher {
 	return &stockwatcher{
