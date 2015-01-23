@@ -12,25 +12,18 @@ $ make install
 
 ```sh
 $ stockwatcher --help
-```
-
-### Examples
-
-```sh
-$ stockwatcher -s GOOG,IBM,YHOO,CSCO,AAPL,FB,TWTR -i 1
-```
-
-```sh
-$ stockwatcher --help
 Usage of stockwatcher:
   -i=1: Interval for stock data to be updated in seconds
   -s="": Symbols for ticker, comma seperate (no spaces)
 ```
 
-Output from the above command shown below.
+### Example
 
 Displayed as Symbol, Current Price, Previous Price, and up/down indicator.
 
+```sh
+$ stockwatcher -s GOOG,IBM,YHOO,CSCO,AAPL,FB,TWTR -i 1
+```
 ```sh
 
    AAPL  111.27  111.26    ↑
