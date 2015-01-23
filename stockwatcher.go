@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/signal"
 	"regexp"
 	"sort"
 	"strconv"
@@ -141,7 +140,7 @@ func query(symbol string) (*Stock, error) {
 
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		log.Fatalln(err)
-		os.Exit(1)
+		//os.Exit(1)
 	}
 	return data, nil
 }
@@ -165,8 +164,10 @@ func (t *stockwatcher) runner() {
 			defer wg.Done()
 			stock, err := query(k)
 			if err != nil {
-				log.Fatalln(err)
-				os.Exit(1)
+				t.updateStock(stock.List.Resources[0].Resource.Fields.Symbol, 0.00)
+				return
+				//log.Fatalln(err)
+				//os.Exit(1)
 			}
 			t.updateStock(stock.List.Resources[0].Resource.Fields.Symbol,
 				convertPrice(re.FindString(stock.List.Resources[0].Resource.Fields.Price)),
@@ -228,14 +229,6 @@ func printTb(x, y int, msg string, fg, bg termbox.Attribute) {
 
 func main() {
 	flag.Parse()
-
-	// catch ctrl-c's
-	signal.Notify(signalChan, os.Interrupt)
-	go func() {
-		for range signalChan {
-			os.Exit(1)
-		}
-	}()
 
 	// make sure we got what was expected from the CLI
 	if flag.NFlag() != 2 || *symbolFlag == "" {
