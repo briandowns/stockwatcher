@@ -122,7 +122,6 @@ func (t *stockwatcher) updateStock(symbol string, price float64) {
 }
 
 // query will retrieve data for a given symbol
-// TODO(briandowns) Instead of dying on failure, set the symbol data to nil values
 func query(symbol string) (*Stock, error) {
 	data := &Stock{}
 	client := http.Client{
