@@ -32,10 +32,10 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const TIMEOUT = time.Duration(time.Second * 10)
-const URL = "http://finance.yahoo.com/webservice/v1/symbols/%s/quote?format=json"
-const UP = "↑"   // rune 8593
-const DOWN = "↓" // rune 8595
+const TIMEOUT = time.Duration(time.Second * 10)                                   // how long to wait on a call
+const URL = "http://finance.yahoo.com/webservice/v1/symbols/%s/quote?format=json" // where we're getting our data from
+const UP = "↑"                                                                    // rune 8593
+const DOWN = "↓"                                                                  // rune 8595
 
 var re = regexp.MustCompile(`^\d.+\.\d{2}`) // this is to have only 2 decimal places
 var signalChan = make(chan os.Signal, 1)    // channel to catch ctrl-c
@@ -136,7 +136,6 @@ func query(symbol string) (*Stock, error) {
 
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		log.Fatalln(err)
-		//os.Exit(1)
 	}
 	return data, nil
 }
