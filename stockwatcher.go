@@ -158,7 +158,7 @@ func (t *stockwatcher) runner() {
 		go func(k string) {
 			defer wg.Done()
 			stock, err := query(k)
-			if err != nil { // if we can't get a response from the API, put 0.00 in and keep going
+			if err != nil { // if we can't get a response from the API, put 0.00's in and keep going
 				t.updateStock(k, 0.00)
 				return
 			}
