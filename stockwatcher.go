@@ -272,5 +272,5 @@ loop:
 	close(event)
 	time.Sleep(1 * time.Second)
 	termbox.Close()
-	os.Exit(0)
+	os.Exit(0) // close out on a good note
 }
