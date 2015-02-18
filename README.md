@@ -1,6 +1,6 @@
 ## stockticker
 
-A simple CLI application to watch a given set of stocks.
+A simple CLI application to watch the activity of a given set of stocks.
 
 ### Build & Install
 
