@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// A CLI application to monitor one or more stocks.
+// A simple CLI application to watch the activity of a given set of stocks.
 package main
 
 import (
